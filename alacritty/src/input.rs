@@ -357,6 +357,12 @@ impl<T: EventListener> Execute<T> for Action {
             Action::SpawnNewInstance => ctx.spawn_new_instance(),
             Action::CreateNewWindow => ctx.create_new_window(),
             Action::ReceiveChar | Action::None => (),
+            Action::CopyDynamic => {
+                if !ctx.selection_is_empty() {
+                    ctx.copy_selection(ClipboardType::Clipboard);
+                    ctx.clear_selection();
+                }
+            },
         }
     }
 }
@@ -1042,6 +1048,10 @@ impl<T: EventListener, A: ActionContext<T>> Processor<T, A> {
             if binding.is_triggered_by(mode, mods, &key) {
                 // Pass through the key if any of the bindings has the `ReceiveChar` action.
                 *suppress_chars.get_or_insert(true) &= binding.action != Action::ReceiveChar;
+
+                if binding.action == Action::CopyDynamic && self.ctx.selection_is_empty() {
+                    suppress_chars = Some(false);
+                }
 
                 // Binding was triggered; run the action.
                 binding.action.clone().execute(&mut self.ctx);
